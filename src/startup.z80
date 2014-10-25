@@ -1,0 +1,139 @@
+	.module startup
+	.optsdcc -mz80
+	
+	.globl boot
+	.globl _main
+	
+	.area PSEG
+	.area XSEG
+	.area HOME (ABS)
+	.area CODE (ABS, CON)
+	.org 0
+	
+	.org 0x0000
+
+	di
+	jp boot
+
+	;.org 0x0008
+
+	;; RST 08
+	ret
+
+	.org 0x0010
+
+	;; RST 10
+	ret
+
+	.org 0x0018
+
+	;; RST 18
+	ret
+
+	.org 0x0020
+
+	;; RST 20
+	ret
+
+	.org 0x0026
+
+	;; 0026 = special flag for TI-73 ???
+	nop
+
+	.org 0x0028
+
+	;; RST 28
+	ret
+
+	.org 0x0030
+
+	;; RST 30
+	ret
+
+	.org 0x0038
+
+	;; RST 38 = IM 1 Interrupt
+	ret
+	
+	;jp Interrupt
+
+	.org 0x0053
+
+	;; 0053 = boot code returns here after a reset
+	jp boot
+
+	;; 0056 = flag identifying a prevalidated OS
+	.db 0x5A,0xA5
+	
+	.org 0x0064
+	;; 0064 = version number string
+	.ascii "1.0 CatOS"
+	.db 0
+	
+boot:
+	di
+	; Initialize ports
+	xor a
+	out (#0),a		; reset link
+	dec a
+	out (#1),a		; reset keypad
+	ld a,#0x0b
+	out (#3),a		; default interrupt
+	ld a,#0x76
+	out (#4),a		; standard int clock
+	ld a,#0x41
+	out (#7),a		; ram page 1 in bank 3
+
+	in a,(#2)
+	and #0x80
+	jr z,BootBE
+
+	ld a,#0x81
+	out (#7),a		; ram page 1 in bank 3
+	dec a
+	out (#8),a		; reset dbus
+	xor a
+	out (#8),a		; enable dbus
+	out (#5),a		; ram page 0 in bank 4
+	out (#0x20),a		; cpu clock
+	ld a,#0x14
+	out (#0x29),a		; lcd clock
+	xor a
+	out (#0x30),a		; clear timers
+	out (#0x33),a
+	out (#0x36),a
+BootBE:
+	im #1
+	ld sp,#0
+	ld hl,#0
+	push hl
+	push hl
+
+	ld a,#0x18		; Reset test mode
+	call LCDIOut
+	ld a,#1			; 8-bit mode
+	call LCDIOut
+	ld a,#0xf0		; Contrast
+	;ld (contrast),a
+	call #LCDIOut
+	ld a,#0x40		; Vertical shift
+	call LCDIOut
+	ld a,#5			; Downward motion
+	call LCDIOut
+	ld a,#1
+	
+	jp _main
+	
+loop:
+	jp loop
+	
+LCDIOut:
+;;; Slow but safe method for sending LCD init commands
+	push af
+LCDIOut_loop:
+	in a,(#0x10)
+	and #0x80
+	jr nz,LCDIOut_loop
+	pop af
+	out (#0x10),a
+	ret
