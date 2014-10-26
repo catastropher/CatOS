@@ -1,0 +1,171 @@
+TI-83+ OS Tools
+---------------
+
+This is a collection of stuff that may be useful to anyone interested
+in OS development on the TI-83+ (and 83+SE, and 73, and 84+, and
+84+SE.)
+
+I've packaged up three programs, which are not the only ones I've
+written, but the others don't really bear remembering.  Anyhow, these
+three programs should be quite sufficient for all your hacking needs.
+
+
+
+multihex
+--------
+
+multihex is a program to "multiplex" Intel Hex.  Its function is
+almost trivially simple.  So what does it do? It takes a series of hex
+files such as these:
+
+---- file1.hex
+:20000000C3A101FFFFFFFFFFC9FFFFFFFFFFFFFFC9FFFFFFFFFFFFFFC9FFFFFFFFFFFFFF3A
+:00000001FF
+----
+
+---- file2.hex
+:20400000312E303020506F6E674F5300ED57F53E0100F30000ED56F3D314F1E0FBC9ED572A
+:00000001FF
+----
+
+These are specified on the command line with hexadecimal page addresses:
+
+ multihex 00 file1.hex 1C file2.hex > os.hex
+
+It combines them into a single file, adding the TI meta-records:
+
+---- os.hex
+:020000020000FC
+:20000000C3A101FFFFFFFFFFC9FFFFFFFFFFFFFFC9FFFFFFFFFFFFFFC9FFFFFFFFFFFFFF3A
+:02000002001CE0
+:20400000312E303020506F6E674F5300ED57F53E0100F30000ED56F3D314F1E0FBC9ED572A
+:00000001FF
+----
+
+This can be rather useful in making OS's larger than one page.
+
+
+
+rompatch
+--------
+
+This also has a simple function, though slightly less so.  It installs
+a TI-Hex file (such as multihex generates) into a binary ROM image or
+CLC.  Basic syntax:
+
+ rompatch calc.rom os.hex
+
+I've found this program is also very nice in debugging FlashApps -- it
+saves me a lot of clicking between assembling the file and getting it
+loaded into an emulator.  To install a one page app, something like
+
+ multihex 15 app.hex | rompatch calc.rom -
+
+will do the trick.  For multi-page apps, you probably want to mark
+relative page offsets rather than absolute ones, so you can use the
+-a8 option:
+
+ multihex 0 page0.hex 1 page1.hex | rompatch calc.rom -a8 15 -
+
+This will subtract all page numbers from 15.  Similarly, -a7 works for
+multi-page TI-73 apps, adding page numbers to the base page you
+specify.  Finally, you can install a standard OS into an 84 or SE ROM
+image using the -4 or -s option, which moves pages 10-1F to 30-3F or
+70-7F appropriately.
+
+
+
+packxxu
+-------
+
+This is the really interesting one.  It takes a TI-Hex file and puts
+it in an XXU wrapper suitable for installation.
+
+- A binary header is created to placate your link program (I believe
+it is compatible with TI-Connect) which contains the information it
+needs in order to initiate the transfer.
+
+- A hex header is created which describes the OS to the boot code.
+This is much like an app header, but unlike an app which has its
+header at the beginning of the code, the OS header is transferred
+before the installation begins, and is then written to page 1A.  It's
+also substantially simpler than an app header.
+
+- Finally, a bogus certificate is added.
+
+If your OS places code on page 1A, you must also put a copy of the OS
+header at 4000 on that page, in the OS code.  The space from 4100 to
+4200 should be filled with FF's.
+
+packxxu accepts a healthy supply of options:
+
+ -o: specify an output file
+ -t: set the calculator type
+ -d: set the OS date stamp
+ -v: set the OS version number
+ -h: set the hardware compatibility number
+ -c: manually set calculator ID  \
+ -q: manually set certificate ID  \ options you hopefully
+ -s: set the OS Size              / shouldn't need to use
+ -i: set the OS Image Size       /
+
+So to conclude our example,
+
+ packxxu -t 83p -v 1.23 -h 1 os.hex -o os.8xu
+
+would pack an 83+ upgrade file, compatible with the SE, marked as
+version 1.23, and stamped with today's date.
+
+
+
+Thanks
+------
+
+must go to the following people if I am to claim any form of
+programming courtesy.  My undying gratitude goes out to all of
+them... in no particular order:
+
+ * Dan Englender
+ * Michael Vincent
+ * Scott Dial
+ * Jason Malinowski
+ * Rob van Wijk
+
+Thanks also to everyone else who was part of the unforgettable
+experience of the OS Replacement Project discussion.  Thanks to Brian
+Dean, who finally cleared up the legal issues and gave us official
+validity, so to speak.
+
+Thanks to the many programmers down the ages who have hacked these
+calculators, on whose metaphorical shoulders I stand.
+
+
+
+Legal stuff
+-----------
+
+All of the programs in this package are free software.  You are free
+to modify and redistribute them as you wish, under the terms of the
+GNU General Public License.
+
+Note that this places no restrictions on the output from these
+programs (assuming you don't actually use code from PongOS.)  Do
+whatever you like with your own code; I'm just the toolchain guy.
+
+But please, do us all a favor and make your OS's free.  No one
+benefits from the obnoxious restrictions certain programmers are apt
+to demand -- not even you.
+
+
+
+Contact Me
+----------
+
+Please do.  I'd like to hear about any problems you encounter with
+these programs.  If you're considering using them I'm probably going
+to be interested in the results.  Not to mention that I'm happy to
+answer any questions you might have.
+
+The best way is to email me at benjamin@ecg.mit.edu.  The second best
+way is to find me lurking on the Detached Solutions forum.
+

@@ -1,0 +1,36 @@
+	.module flashlock
+	.optsdcc -mz80
+	
+	.area PSEG
+	.area XSEG
+	.area HOME (ABS)
+	.area CODE (ABS, CON)
+	
+	.org 0x4000
+
+;** RomLock
+;* Enables / disables flash-writing.
+;* IN B: 0 to disable, 1 to enable.
+;* OUT A: Garbage
+RomLock:              ; (Un)Locks most ROM pages.
+                      ; Thanks to Benjamin Moody
+
+RomLock_0:
+    LD A, I
+    PUSH AF
+    DI
+    LD A, B
+    NOP
+    NOP
+    IM #1
+    DI
+    OUT (#0x14), A
+    POP AF
+    RET PO
+    EI
+    RET
+    
+	.area _DATA (ABS)
+
+	.org 0x7fff
+    RST #0x38
