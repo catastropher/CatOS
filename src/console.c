@@ -295,9 +295,6 @@ Console *init_console(uchar pid) {
 	Console *c;
 	uchar i;
 	
-	if(!process_valid(pid))
-		return NULL;
-	
 	c = system_alloc(sizeof(Console));//malloc_for_pid(pid, sizeof(Console));
 	
 	clear_console(c);
