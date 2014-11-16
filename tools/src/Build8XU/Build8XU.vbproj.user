@@ -1,6 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <StartArguments>-vvalid.bin -c -t83P -k0F -m04 -n00 -h05 -ooutput.8cu 00:0000:page00.bin 01:0000:page01.bin 02:0000:page02.bin 03:0000:page03.bin 04:0000:page04.bin 05:0000:page05.bin 06:0000:page06.bin 07:0000:page07.bin E4:0000:pageE4.bin E5:0000:pageE5.bin E6:0000:pageE6.bin E7:0000:pageE7.bin E8:0000:pageE8.bin E9:0000:pageE9.bin EA:0000:pageEA.bin EB:0000:pageEB.bin EC:0000:pageEC.bin ED:0000:pageED.bin EE:0000:pageEE.bin EF:0000:pageEF.bin F0:0000:pageF0.bin F1:0000:pageF1.bin F2:0000:pageF2.bin F3:0000:pageF3.bin F4:0000:pageF4.bin F5:0000:pageF5.bin F6:0000:pageF6.bin F7:0000:pageF7.bin F8:0000:pageF8.bin F9:0000:pageF9.bin FA:0000:pageFA.bin FB:0000:pageFB.bin FC:0000:pageFC.bin</StartArguments>
-  </PropertyGroup>
-</Project>
