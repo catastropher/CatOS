@@ -2,6 +2,9 @@
 
 #include <stdio.h>
 
+// Queries the keypad hardware to determine which keys in the key matrix
+// are being pressed. This is read into the 8-byte buffer pointed to by
+// dest
 void read_keypad(uchar *dest) __naked {
 	__asm
 	push bc
@@ -85,8 +88,10 @@ void read_keypad(uchar *dest) __naked {
 	__endasm;
 }
 
-
-
+// Attemps to determine the ASCII representation of indicated key
+// (indicated by the position in the key matrix). This takes into account
+// whether 2nd or alpha has been pressed) Note that 2nd is shift and
+// alpha is used for symbols
 uchar get_key_code(uchar flags, uchar x, uchar y) {
 	uchar key[] = "xsnida";
 	uchar add = (flags == 1 ? ('A' - 'a') : 0);
@@ -123,8 +128,12 @@ uchar get_key_code(uchar flags, uchar x, uchar y) {
 	return 0;
 }
 
+// Macro for low-level key matrix checking
 #define KEY(_s, _x, _y) ((_s->key_map[_y] & (1 << _x)) != 0)
 
+// Compares two key matricies to determine which key has been pressed. A
+// key is considered pressed if it was pressed in the old key matrix but
+// isn't pressed in the new one.
 uchar compare_key_matrix(KeyState *old, KeyState *new) {
 	uchar x, y;
 	uchar o;
@@ -202,11 +211,10 @@ uchar compare_key_matrix(KeyState *old, KeyState *new) {
 	return 0;
 }
 
+// Waits for a key to be pressed and returns the key that was pressed. Note: this
+// will put the process to sleep if no key was pressed or if it's not the active console
 uchar wait_key() {
 	uchar key;
-	
-	//if(current_process->key == 0)
-	//	force_context_switch();
 	
 	do {
 		while(console_pid != process_id) {

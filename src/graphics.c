@@ -21,6 +21,7 @@ void draw_string(uchar *str, uchar x, uchar y) {
 	}
 }
 
+// Draws an inverted string (white on black)
 void draw_string_inverse(uchar *str, uchar x, uchar y) {
 	while(*str != 0) {
 		draw_char(128 + str[0], x, y);
@@ -29,6 +30,9 @@ void draw_string_inverse(uchar *str, uchar x, uchar y) {
 	}
 }
 
+// Fills a black rectangle on the screen
+// Not really intended for general usage; it's only used by the screen
+// transition
 void fill_rect(uchar x_byte, uchar height) {
 	uchar x, y;
 	
@@ -38,13 +42,6 @@ void fill_rect(uchar x_byte, uchar height) {
 		}
 	}
 }
-
-
-
-
-
-
-
 
 // Copies the virtual screen in memory to the LCD
 // The screen is pointed to by the global variable system_screen
