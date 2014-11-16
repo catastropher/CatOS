@@ -4,12 +4,18 @@
 
 #define RAM_PAGES 8
 
-#define BLOCK_FREE 127
-#define BLOCK_SIZE 128
-#define TOTAL_BLOCKS (16384 / BLOCK_SIZE)
+#define BLOCK_FREE 127		// Used to indicate that a block of memory is free
+#define BLOCK_SIZE 128		// The size of a memory block
+#define TOTAL_BLOCKS (16384 / BLOCK_SIZE)	// The total number of blocks in a single RAM page
 
+// Allocation table for the entire operating system (across all 8 RAM pages)
 uchar malloc_tab_full[RAM_PAGES * TOTAL_BLOCKS];
 
+// Allocates a chunk of memory that is at least 'size' bytes in length. This function
+// allows you to customize the allocation: between which allocation blocks (start and end)
+// to search for, which process ID to allocate it for, and which of the 8 RAM pages it
+// should be allocated for.
+// Note: this is meant as an internal function and shouldn't be used by user programs.
 void *malloc_from_range(ushort size, uchar start, uchar end, uchar pid, uchar page) {
 	uchar i;
 	uchar count = 0;
@@ -29,6 +35,7 @@ void *malloc_from_range(ushort size, uchar start, uchar end, uchar pid, uchar pa
 	
 	needed++;
 	
+	// Search for a sequence of blocks which is at least equal to 'needed' blocks
 	for(i = start;i <= end;i++) {
 		if(malloc_tab[i] == BLOCK_FREE) {
 			if(count == 0)
@@ -65,8 +72,10 @@ void *malloc_from_range(ushort size, uchar start, uchar end, uchar pid, uchar pa
 	return NULL;
 }
 
+// Allocates a chunk of memory for the filesystem
+// Note: this sets the chunk of memory to 0
 void *fs_alloc(ushort size) {
-  void *data = malloc(size);//malloc_from_range(size, 0, TOTAL_BLOCKS - 1, 0, 7);
+  void *data = malloc_from_range(size, 0, TOTAL_BLOCKS - 1, 0, 7);
   
   if(!data)
     return NULL;
@@ -76,12 +85,39 @@ void *fs_alloc(ushort size) {
   return data;
 }
 
+// General memory allocation routine for user programs (exactly like the C standard library
+// function). Note that the size may be larger than what was asked for. Also, the process
+// that calls this function owns the memory allocated. If the allocation fails, it returns NULL.
 void *malloc(ushort size) {
 	return malloc_from_range(size, 0, TOTAL_BLOCKS - 1, process_id, current_process->ram_page);
 }
 
+// Frees a block of memory allocated by any of the allocation routines.
+// TODO: finish implementing!
 void free(void *ptr) {
-	uchar block = ((ushort)ptr - 0x8000) / BLOCK_SIZE;
+	//uchar block = ((ushort)ptr - 0x8000) / BLOCK_SIZE;
+	ushort base;
+	uchar block;
+	
+	if(ptr <= 0xC000)
+		base = 0xC000;
+	else
+		base = 0x8000;
+	
+	//block = (ptr - base) / BLOCK_SIZE;
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	//uchar *malloc_tab = &malloc_tab_full[process_tab[process_id].ram_page * TOTAL_BLOCKS];
 	
 	/*if(ptr >= (void *)0x8000 && malloc_tab[block] == current_process->id) {
@@ -92,18 +128,7 @@ void free(void *ptr) {
 	*/
 }
 
-ushort get_mem_usage(uchar pid) {
-	ushort sum = 0;
-	uchar i;
-
-	/*for(i = 0;i < 255;i++) {
-		if((malloc_tab[i] & 0x7F) == pid)
-			sum += BLOCK_SIZE;
-	}*/
-	
-	return sum;
-}
-
+// Returns the number of blocks which are free on a given RAM page
 uchar get_free_blocks(uchar page) {
 	uchar i;
 	uchar *malloc_tab = &malloc_tab_full[(ushort)page * TOTAL_BLOCKS];
@@ -117,18 +142,7 @@ uchar get_free_blocks(uchar page) {
 	return count;
 }
 
-ushort get_total_mem_usage() {
-	ushort sum = 0;
-	uchar i;
-	
-	/*for(i = 0;i < 255;i++) {
-			if(malloc_tab[i] != BLOCK_FREE)
-				sum += BLOCK_SIZE;
-	}*/
-	
-	return sum;
-}
-
+// Returns the total amount of free memory available to the system.
 unsigned long get_free_mem() {
 	unsigned long sum = 0;
 	uchar i;
@@ -163,35 +177,25 @@ uchar get_best_ram_page() {
 	return best_page;
 }
 
+// Allocates memory for the given process
 void *malloc_for_pid(uchar pid, ushort size) {
 	return malloc_from_range(size, 0, TOTAL_BLOCKS - 1, pid, process_tab[pid].ram_page);
 }
 
+// Allocates kernal memory.
+// Note: the memory allocated is owned by the system process!
 void *system_alloc(ushort size) {
 	return malloc_from_range(size, 0, TOTAL_BLOCKS - 1, process_id, 1);
 }
 
-
+// Initializes the memory manager
 void init_memory() {
 	uchar i;
 	
+	// Set every block in the allocation table to be free
 	memset(malloc_tab_full, BLOCK_FREE, RAM_PAGES * TOTAL_BLOCKS);
 	
-	//malloc_tab = malloc_tab_full;
-	
+	// Reserve some kernal RAM for global variables
 	malloc_tab_full[TOTAL_BLOCKS] = 128;
-	
-	
 	memset(malloc_tab_full + TOTAL_BLOCKS + 1, 0, 25);
-	//for(i = 1;i < 25;i++) {
-	//	malloc_tab_full[(ushort)i + TOTAL_BLOCKS] = 128;
-	//}
-	
-	/*
-	malloc_tab[0] = 0;
-	
-	for(i = 1;i < 200;i++)
-		malloc_tab[i] = 128;
-	
-	*/
 }
