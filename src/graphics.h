@@ -22,6 +22,9 @@ void cps();
 // Draws an 8xH sprite on the screen, where H is the height of the sprite
 // Note: the sprite is not clipped (i.e. if it is partially off screen, it
 // will corrupt other things in memory!)
-void draw_sprite(uchar *sprite, uchar height, uchar x, uchar y);
+void draw_sprite(uchar *sprite, uchar height, uchar x, uchar y, uchar mode);
+
+void fill_rect(uchar x_byte, uchar height);
+void draw_string_inverse(uchar *str, uchar x, uchar y);
 
 #endif

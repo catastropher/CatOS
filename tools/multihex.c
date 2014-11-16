@@ -52,10 +52,10 @@ int main(int argc, char **argv)
       return 1;
     }
 
-    if (pagenum>0x1d) {
-      fprintf(stderr,"%s: page number %s out of bounds.\n",argv[0],argv[i]);
-      return 1;
-    }
+    //if (pagenum>0x1d) {
+    //  fprintf(stderr,"%s: page number %s out of bounds.\n",argv[0],argv[i]);
+    //  return 1;
+    //}
 
     printf(":0200000200%02X%02X\n",pagenum,0xFC-pagenum);
 

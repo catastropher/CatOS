@@ -3,6 +3,11 @@
 	
 	.globl boot
 	.globl _main
+	.globl _unlock_flash
+	.globl _lock_flash
+	.globl _flash_write_block
+	.globl clear_sector
+	.globl isr_process_resume
 	
 	.area PSEG
 	.area XSEG
@@ -53,6 +58,7 @@
 	.org 0x0038
 
 	;; RST 38 = IM 1 Interrupt
+	call isr
 	ret
 	
 	;jp Interrupt
@@ -102,6 +108,10 @@ boot:
 	out (#0x30),a		; clear timers
 	out (#0x33),a
 	out (#0x36),a
+	
+	ld a,#1
+	out (#0x20),a
+	
 BootBE:
 	im #1
 	ld sp,#0
@@ -122,6 +132,23 @@ BootBE:
 	call LCDIOut
 	ld a,#1
 	
+	;unlock ram
+	xor a
+	out (#0x25),a
+	
+	ld a,#0xFF
+	out (#0x26),a
+	
+	ld sp,#0xFFFF
+	
+	
+	
+	;load the flash unlock routine into RAM
+	ld de,#0x8000
+	ld hl,#ram_flash_abs_start
+	ld bc,#ram_flash_end - ram_flash_start + 1
+	;ldir
+		
 	jp _main
 	
 loop:
@@ -136,4 +163,286 @@ LCDIOut_loop:
 	jr nz,LCDIOut_loop
 	pop af
 	out (#0x10),a
+	ret
+	
+isr:
+	di
+	push af
+	
+	ld a,(_allow_interrupts)
+	or a
+	jr Z,isr_disabled
+	
+	push bc
+	push de
+	push hl
+	push ix
+	push iy
+	
+	in a, (#6)
+	push af
+	in a, (#5)
+	push af
+	
+	xor a
+	ld (_allow_interrupts),a
+	
+	
+	ld hl,#0
+	add hl,sp
+	ex de,hl
+	ld hl,(_current_process)
+	ld (hl),e
+	inc hl
+	ld (hl),d
+	
+	in a,(#4)
+	ld c,a
+	ld a,(_isr_flags)
+	or c
+	ld c,a
+	
+	xor a
+	ld (_isr_flags),a
+	
+	ld b,#0
+	push bc
+	
+	xor a
+	out (#3),a
+	
+	ld hl,#isr_process_resume
+	;push hl
+	
+	call _interrupt_handler
+	pop hl
+	
+isr_process_resume:
+	;pop hl
+	pop af
+	out (#5),a
+	pop af
+	out (#6),a
+	
+	ld a,#11
+	out (#3),a
+	
+	ld a,#1
+	ld (_allow_interrupts),a
+	
+	pop iy
+	pop ix
+	pop hl
+	pop de
+	pop bc
+	pop af
+	
+	ei
+	ret
+	
+isr_disabled:
+	pop af
+	ret
+	
+ram_flash_abs_start:
+	
+ram_flash_start:
+	
+_flash_write_block	.equ 0x8000 + (_ram_flash_write_block - ram_flash_start)
+	
+ram_unlock_flash:
+	push af
+	in a,(#6)
+	push af
+	ld a,#0x7C
+	out (#6),a
+	call 0x4000
+	pop af
+	out (#6),a
+	pop af
+	ret
+ram_unlock_flash_end:
+	
+;======================================================
+_ram_flash_write_block:
+	push bc
+	push de
+	push de
+	push ix
+	
+	ld ix,#0
+	add ix,sp
+	
+	ld l, 10(ix)
+	ld h, 11(ix)
+	ld e, 12(ix)
+	ld d, 13(ix)
+	ld b, 14(ix)
+	
+;** writeblk
+;* IN DE: Destination block (in flash-driver format, see also the OS Documentation page)
+;* IN HL: Pointer to data.
+;* OUT A: Garbage
+;* OUT BC: Garbage
+;* OUT DE: Garbage
+;* OUT HL: $FFFF on failure, pointer to end of data (source) on success.
+;* Writes 1 block of data to the flash.
+
+writeblk:
+    LD A, D
+    LD C, A       ; Save the needed page for later.
+    OUT (#6), A
+    LD D, #0
+    EX DE, HL
+    ADD HL, HL ; 2
+    ADD HL, HL ; 4
+    ADD HL, HL ; 8
+    ADD HL, HL ; 16
+    ADD HL, HL ; 32
+    ADD HL, HL ; 64
+    PUSH DE
+    LD DE, #0x4000
+    ADD HL, DE
+    POP DE
+    EX DE, HL
+writeblk_start:
+writeblk_loop:
+    DI
+    LD A, #0xF0 ; RESET the chip
+    OUT (#0), A
+    LD A, #2 ; <AA>
+    OUT (#6), A
+    LD A, #0xAA
+    LD (#0x6AAA), A
+    LD A, #0x1 ; <55>
+    OUT (#6), A
+    LD A, #0x55
+    LD (#0x5555), A
+    LD A, #2 ; [A0]
+    OUT (#6), A
+    LD A, #0xA0
+    LD (#0x6AAA), A
+    LD A, C ; Write the byte.
+    OUT (#6), A
+    LD A, (HL)
+    LD (DE), A
+    PUSH HL
+    CALL byteRDY
+    LD A, H ; Check for errors
+    CP #0xff
+    JR Z, writeblk_exit
+
+    POP HL
+
+    ; Give other processes a chance:
+
+    INC HL
+    INC DE
+    DJNZ writeblk_loop
+    jr writeblk
+
+writeblk_exit:
+    POP DE
+    
+writeblk_done:
+    pop ix
+    pop de
+    pop de
+    pop bc
+    
+    ret
+    
+byteRDY	.equ 0x8000 + (byteRDY_ram - ram_flash_start)
+clear_sector	.equ 0x8000 + (ram_clear_sector - ram_flash_start)
+    
+    ;===========================
+    ;** byteRDY
+;* IN A: Value that is written
+;* IN DE: Byte that is written
+;* OUT A: Is always $F0
+;* OUT DE: Byte that is written
+;* OUT HL: $0000 on success, $FFFF on failure.
+;* Waits until byte DE of the current flash page is ready writing value A to itself.
+
+byteRDY_ram:          ; Checks wheter byte DE of current page is ready writing
+                  ; Needs A as "byte to write".
+    LD HL, #0x0000
+    PUSH BC
+                  ; Thanks to Benjamin Moody
+    AND #0x80
+    LD B, A
+byteRDY_loop:
+    LD A, (DE)
+    XOR B
+    JP P, byteRDY_exit
+    BIT #5, A
+    JR Z, byteRDY_loop
+    LD A, (DE)    ; Recheck, to be sure (AMD recommands)
+    XOR B
+    JP P, byteRDY_exit
+    LD HL, #0xFFFF  ; EXIT_FAILURE
+		jp byteRDY_exit
+    
+    
+		;=========================
+ram_clear_sector:
+    CP #32
+    JR NC, clrsec_illegal
+    ADD A, A  ; 2
+    ADD A, A  ; 4 pages a sector.
+    LD B, A
+    DI
+    LD A, #0xF0 ; RESET the chip
+    OUT (#0), A
+    LD A, #2 ; <AA>
+    OUT (#6), A
+    LD A, #0xAA
+    LD (#0x6AAA), A
+    LD A, #1 ; <55>
+    OUT (#6), A
+    LD A, #0x55
+    LD (#0x5555), A
+    LD A, #0x2 ; [80]
+    OUT (#6), A
+    LD A, #0x80
+    LD (#0x6AAA), A
+    LD A, #0xAA ; <AA>
+    LD (#0x6AAA), A
+    LD A, #1 ; <55>
+    OUT (#6), A
+    LD A, #0x55
+    LD (#0x5555), A
+    LD A, B ; (30)
+    OUT (#6), A
+    LD A, #0x30
+    LD (#0x4000), A
+    LD A, #0xFF ; Check for finished
+    LD DE, #0x4000
+    JP byteRDY
+clrsec_illegal:
+    LD HL, #0xFFFF
+    RET
+
+    
+ram_flash_end:    
+    
+byteRDY_exit:
+    POP BC
+    LD A, #0xF0 ; RESET the chip
+    OUT (#0), A
+    EI
+    RET    
+    
+_unlock_flash:
+	push bc
+	ld b,#1
+	call #0x8000
+	pop bc
+	ret
+	
+_lock_flash:
+	push bc
+	ld b,#0
+	call #0x8000
+	pop bc
 	ret

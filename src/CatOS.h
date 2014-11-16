@@ -1,6 +1,8 @@
 #ifndef CATOS_H
 #define CATOS_H
 
+#define SYSCALL
+
 //=============================================================================
 
 // It gets annoying typing these out all the time, so they've been
@@ -16,9 +18,28 @@ typedef unsigned short ushort;
 //=============================================================================
 
 
+#include "keypad.h"
 #include "multitask.h"
 #include "sysvars.h"
 #include "graphics.h"
 #include "memory.h"
+#include "console.h"
+#include "filesystem.h"
+
+#define DI() __asm\
+	di\
+	__endasm;
+	
+#define EI() __asm\
+	ei\
+	__endasm;
+	
+#define HALT() __asm\
+	di\
+	halt\
+	__endasm;
 
 #endif
+	
+#define TRUE 1
+#define FALSE 0

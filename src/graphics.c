@@ -2,7 +2,12 @@
 
 // Draws a character on the screen
 void draw_char(uchar c, uchar x, uchar y) {
-	draw_sprite(ASMSYMBOL(system_font, Character *)[(unsigned short)c].sprite, 5, x, y);
+	if(c < 128)
+		draw_sprite(ASMSYMBOL(system_font, Character *)[(unsigned short)c].sprite, 5, x, y, 0);
+	else {
+		c -= 128;
+		draw_sprite(ASMSYMBOL(system_font, Character *)[(unsigned short)c].sprite, 5, x, y, 1);
+	}
 }
 
 // Draws a string on the screen
@@ -16,8 +21,23 @@ void draw_string(uchar *str, uchar x, uchar y) {
 	}
 }
 
+void draw_string_inverse(uchar *str, uchar x, uchar y) {
+	while(*str != 0) {
+		draw_char(128 + str[0], x, y);
+		str++;
+		x += 4;
+	}
+}
 
-
+void fill_rect(uchar x_byte, uchar height) {
+	uchar x, y;
+	
+	for(x = x_byte;x < 12 - x_byte;x++) {
+		for(y = (64 / 2) - height;y <= (64 / 2) + height;y++) {
+			system_screen[y * 12 + x] = 0xFF;
+		}
+	}
+}
 
 
 
@@ -77,7 +97,7 @@ fastCopyLoop:
 // Draws an 8xH sprite on the screen, where H is the height of the sprite
 // Note: the sprite is not clipped (i.e. if it is partially off screen, it
 // will corrupt other things in memory!)
-void draw_sprite(uchar *sprite, uchar height, uchar x, uchar y) __naked {
+void draw_sprite(uchar *sprite, uchar height, uchar x, uchar y, uchar mode) __naked {
 
 	sprite; height; x; y;
 
@@ -94,6 +114,10 @@ __asm
 	ld b,12(ix)
 	ld a,13(ix)
 	ld e,14(ix)
+	
+	push iy
+	push ix
+	pop iy
 	
 	push hl
 	pop ix
@@ -134,16 +158,32 @@ putSpriteLoop2:
 	jr	nz,putSpriteLoop2
 putSpriteSkip1:
 	ld	a,(hl)
+	bit 0,15(iy)
+	jr NZ,putSpriteXor
 	or	d
 	ld	(hl),a
 	inc	hl
 	ld	a,(hl)
 	or	e
+	jr putSpriteCont
+	
+putSpriteXor:
+	ld a,d
+	cpl
+	and (hl)
+	ld	(hl),a
+	inc	hl
+	ld a,e
+	cpl
+	and	(hl)
+putSpriteCont:
 	ld	(hl),a
 	ld	de,#0x0B
 	add	hl,de
 	inc	ix
 	djnz	putSpriteLoop1
+	
+	pop iy
 	
 	pop ix
 	pop hl
