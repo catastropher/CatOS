@@ -386,12 +386,24 @@ void game_process() {
 		
 		if(win == 'X')
 		{
+			clear_console(current_con);
+			printf("%c|%c|%c\6", board[0][0], board[0][1], board[0][2]);
+			printf("-----\6");
+			printf("%c|%c|%c\6", board[1][0], board[1][1], board[1][2]);
+			printf("-----\6");
+			printf("%c|%c|%c\6\r", board[2][0], board[2][1], board[2][2]);
 			printf("X Wins!\n");
 			break;
 		}
 		
 		if(win == 'O')
 		{
+			clear_console(current_con);
+			printf("%c|%c|%c\6", board[0][0], board[0][1], board[0][2]);
+			printf("-----\6");
+			printf("%c|%c|%c\6", board[1][0], board[1][1], board[1][2]);
+			printf("-----\6");
+			printf("%c|%c|%c\6\r", board[2][0], board[2][1], board[2][2]);
 			printf("O Wins!\n");
 			break;
 		}
@@ -399,7 +411,7 @@ void game_process() {
 				
 	} while(1);
 	
-	while(1) ;
+	while(1);
 }
 	
 	
