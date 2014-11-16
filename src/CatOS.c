@@ -281,20 +281,20 @@ void math_process() {
 	}
 }
 
-uchar board_check(uchar board[3][3], uchar start_x, uchar start_y, uchar dx, uchar dy) {
-	uchar x = start_x;
-	uchar y = start_y;
+uchar board_check(uchar board[3][3], uchar start_x, uchar start_y, char dx, char dy) {
+	char x = start_x;
+	char y = start_y;
 	uchar i;
 	
 	for(i = 0;i < 3;i++) {
-		if(board[x][y] != board[start_x][start_y])
+		if(board[y][x] != board[start_y][start_x])
 			return 0;
 		
 		x += dx;
 		y += dy;
 	}
 	
-	return board[start_x][start_y];
+	return board[start_y][start_x];
 }
 
 void game_process() {
@@ -362,48 +362,44 @@ void game_process() {
 			}
 		}
 		
-	for(i = 0;i < 3;i++) {
-		win = board_check(board, 0, i, 1, 0);
-		
-		if(win != 0)
-			break;
-	}
-	
-	if(win == 0) {
 		for(i = 0;i < 3;i++) {
-			win = board_check(board, i, 0, 0, 1);
+			win = board_check(board, 0, i, 1, 0);
 			
 			if(win != 0)
 				break;
 		}
-	}
-	
-	if(win == 0)
-		win = board_check(board, 0, 0, 1, 1);
-	
-	if(win == 0)
-		win = board_check(board, 2, 0, 255, 1);
-	
-	if(win == 'X')
-	{
-	  printf("X Wins!");
-	}
-	
-	if(win == 'O')
-	{
-	  printf("O Wins!");
-	}
+		
+		if(win == 0) {
+			for(i = 0;i < 3;i++) {
+				win = board_check(board, i, 0, 0, 1);
+			
+				if(win != 0)
+					break;
+			}
+		}
+		
+		if(win == 0)
+			win = board_check(board, 0, 0, 1, 1);
+		
+		if(win == 0)
+			win = board_check(board, 2, 0, -1, 1);
+		
+		if(win == 'X')
+		{
+			printf("X Wins!\n");
+			break;
+		}
+		
+		if(win == 'O')
+		{
+			printf("O Wins!\n");
+			break;
+		}
 				
 				
 	} while(1);
-}
-
-void game() {
-	uchar i;
-	uchar win = 0;
-	uchar board[3][3];
 	
-	
+	while(1) ;
 }
 	
 	
