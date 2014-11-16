@@ -69,3 +69,4 @@ clean:
 	rm -f *.mem
 	rm -f *.noi
 	rm -f *.rst
+	rm -f *.8xu

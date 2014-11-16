@@ -4,18 +4,16 @@
 #include "CatOS.h"
 
 
-Console *active_con;
-Console *current_con;
-uchar console_pid;
-uchar allow_interrupts;
+Console *active_con;		// The console that is currently displayed on the screen
+Console *current_con;		// The console being used by the current process
+uchar console_pid;			// The process ID of the process which owns the console that is active
+uchar allow_interrupts;		// Whether interrupts are allowed to happen
 
+// Table for all of the consoles in the operating system
 Console *console_tab[MAX_PROCS];
 
-void cls();
-
-//TODO: implement the following
-uchar process_valid(uchar pid) {return 1;}
-
+// Copies the screen into a side-by-side window buffer for the screen transition
+// effect.
 void copy_half(uchar *dest, uchar *src) {
 	uchar x, y;
 	
@@ -30,6 +28,7 @@ void copy_half(uchar *dest, uchar *src) {
 	}
 }
 
+// Shifts the entire screen so that it performs the window transition effect
 void copy_screen_half(uchar *dest, uchar *src_left, uchar *src_right, uchar x_pos) __naked {
 	__asm
 		;push af
@@ -182,8 +181,8 @@ void copy_screen_half(uchar *dest, uchar *src_left, uchar *src_right, uchar x_po
 
 // Switches to the nth visible console. If it doesn't exists, the console
 // isn't switched. Note: this should only be called in the ISR to prevent
-// race conditions!
-
+// race conditions! This also does the cool screen transition effect! All
+// processes are paused while this transition happens!
 void switch_console(uchar id) {
 	uchar i;
 	uchar d;
@@ -214,15 +213,7 @@ void switch_console(uchar id) {
 				if(transition_screen == NULL)
 					transition_screen = system_alloc(768 * 2);
 			
-				old_id = active_con->visible_id;
-				/*if(transition_screen == 0) {
-					__asm
-						di
-						di
-						halt
-					__endasm;
-				}*/
-				
+				old_id = active_con->visible_id;				
 				
 				if(id > old_id) {
 					off = 0;
@@ -285,6 +276,7 @@ void switch_console(uchar id) {
 	}
 }
 
+// Clears the console (resets the position of the cursor and sets it to spaces)
 void clear_console(Console *c) {
 	uchar i;
 	
@@ -317,6 +309,9 @@ Console *init_console(uchar pid) {
 	return c;
 }
 
+// Creates a new console for a process and attemps to map it to a window
+// (0 - 4). Note that the creation of the console can succeed, but mapping
+// it to a window can fail if all of the windows are taken,
 Console *init_visible_console(uchar pid, uchar parent_pid) {
 	Console *c = NULL;
 	uchar found[5];
@@ -346,7 +341,10 @@ Console *init_visible_console(uchar pid, uchar parent_pid) {
 	
 	return c;
 }
-			
+
+// The amount of space it takes 
+#define LINE_SIZE (96 * 7 / 8)
+
 // Prints a character to the given console
 // Special characters:
 // 		\1 - reset the cursor to the beginning of the current line
@@ -355,13 +353,11 @@ Console *init_visible_console(uchar pid, uchar parent_pid) {
 //		\4 - clear the current line and reset cursor to the beginning of the line
 //		\5 - move the cursor to the previous line
 //		\6 - print a newline without redrawing the console
+//		\7 - forces a redraw of the current line
 //		\8 - clears the console
 //		\b - move the cursor back one character
 //		\r - force redraw of the console
 //		\n - print a newline and force redraw of the console
-
-#define LINE_SIZE (96 * 7 / 8)
-
 void console_printc(Console *c, uchar ch) {
 	uchar i;
 	
@@ -445,7 +441,9 @@ void console_printc(Console *c, uchar ch) {
 		EI();
 }
 
-// Redraws a console, if it is the active one
+// Redraws a console
+// Note: this should only be called if the console is active one (the one in the
+// current window)
 void draw_console(Console *c) {
 	uchar i;
 	uchar buf[25];
@@ -474,17 +472,16 @@ void draw_console(Console *c) {
 	}
 }
 
+// SDCC's callback routine to print a character from printf
 void putchar(char tx_data) {
-
 	if(tx_data != 0) {
 		if (current_con != NULL) {
 			console_printc(current_con, tx_data);
 		}
-		else {
-		}
 	}
 }
 
+// Initialize all of the consoles
 void init_consoles() {
 	uchar i;
 	
@@ -495,6 +492,8 @@ void init_consoles() {
 	transition_screen = NULL;
 }
 
+// Like the gets() function in the C standard library. Has the user input a string
+// into buf. Returns when the user presses enter.
 void get_input(uchar *buf) {
 	uchar key;
 	uchar pos = 0;
@@ -529,6 +528,3 @@ void get_input(uchar *buf) {
 	current_con->flags = 0;
 	printf("\b \n");
 }
-		
-		
-		
