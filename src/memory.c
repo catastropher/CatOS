@@ -1,6 +1,7 @@
 #include "CatOS.h"
 
 #include <string.h>
+#include <stdio.h>
 
 #define RAM_PAGES 8
 
@@ -51,10 +52,9 @@ void *malloc_from_range(ushort size, uchar start, uchar end, uchar pid, uchar pa
 					malloc_tab[d + begin] = pid + 128;
 				}
 				
-				allow_interrupts = 1;
-				//allow_interrupts = allow_int;
+				allow_interrupts = allow_int;
 				
-				if(pid != 0)
+				if(page != 1)
 					return (void *)((ushort)begin * BLOCK_SIZE + 0xC000);
 				else
 					return (void *)((ushort)begin * BLOCK_SIZE + 0x8000);
@@ -66,8 +66,6 @@ void *malloc_from_range(ushort size, uchar start, uchar end, uchar pid, uchar pa
 	}
 	
 	allow_interrupts = 1;
-	
-	HALT();
 	
 	return NULL;
 }
@@ -92,40 +90,44 @@ void *malloc(ushort size) {
 	return malloc_from_range(size, 0, TOTAL_BLOCKS - 1, process_id, current_process->ram_page);
 }
 
-// Frees a block of memory allocated by any of the allocation routines.
-// TODO: finish implementing!
-void free(void *ptr) {
+// Frees a block of memory allocated by any of the allocation routines for a process.
+// This is only for internal usage; free() should be used by user programs
+void free_for_pid(void *ptr, uchar pid) {
 	//uchar block = ((ushort)ptr - 0x8000) / BLOCK_SIZE;
-	ushort base;
-	uchar block;
+	uchar *base;
+	ushort block;
+	uchar *mem_tab;
 	
-	if(ptr <= 0xC000)
-		base = 0xC000;
-	else
-		base = 0x8000;
-	
-	//block = (ptr - base) / BLOCK_SIZE;
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	//uchar *malloc_tab = &malloc_tab_full[process_tab[process_id].ram_page * TOTAL_BLOCKS];
-	
-	/*if(ptr >= (void *)0x8000 && malloc_tab[block] == current_process->id) {
-		do {
-			malloc_tab[block++] = BLOCK_FREE;
-		} while(malloc_tab[block] >= 128);
+	if(ptr < (void *)0x8000)
+		return;
+	if(ptr < (void *)0xC000) {
+		base = (void *)0x8000;
+		block = TOTAL_BLOCKS;
 	}
-	*/
+	else {
+		base = (void *)0xC000;
+		block = (ushort)process_tab[pid].ram_page * TOTAL_BLOCKS;
+	}
+	
+	block += (ushort)(ptr - base) / BLOCK_SIZE;
+	mem_tab = malloc_tab_full + block;
+	
+	if(*mem_tab != pid)
+		return;
+	
+	*mem_tab = BLOCK_FREE;
+	mem_tab++;
+	
+	while(*mem_tab == (process_id + 128)) {
+		*mem_tab = BLOCK_FREE;
+		mem_tab++;
+	}
+}
+
+// Frees memory allocated by the current process
+// Can be used to free memory allocated by any of the allocation routines
+void free(void *ptr) {
+	free_for_pid(ptr, process_id);
 }
 
 // Returns the number of blocks which are free on a given RAM page
@@ -148,7 +150,7 @@ unsigned long get_free_mem() {
 	uchar i;
 	
 	for(i = 0;i < 8;i++) {
-		if(i != 1)
+		//if(i != 1)
 			sum += get_free_blocks(i) * BLOCK_SIZE;
 	}
 	
@@ -178,12 +180,13 @@ uchar get_best_ram_page() {
 }
 
 // Allocates memory for the given process
+// Note: this can be for a different process than the one running!
 void *malloc_for_pid(uchar pid, ushort size) {
 	return malloc_from_range(size, 0, TOTAL_BLOCKS - 1, pid, process_tab[pid].ram_page);
 }
 
 // Allocates kernal memory.
-// Note: the memory allocated is owned by the system process!
+// Note: the memory allocated is still owned by the process who created it!
 void *system_alloc(ushort size) {
 	return malloc_from_range(size, 0, TOTAL_BLOCKS - 1, process_id, 1);
 }
@@ -196,6 +199,6 @@ void init_memory() {
 	memset(malloc_tab_full, BLOCK_FREE, RAM_PAGES * TOTAL_BLOCKS);
 	
 	// Reserve some kernal RAM for global variables
-	malloc_tab_full[TOTAL_BLOCKS] = 128;
-	memset(malloc_tab_full + TOTAL_BLOCKS + 1, 0, 25);
+	malloc_tab_full[TOTAL_BLOCKS] = 0;
+	memset(malloc_tab_full + TOTAL_BLOCKS + 1, 128, 25);
 }

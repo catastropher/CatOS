@@ -4,6 +4,7 @@
 void *malloc_from_range(ushort size, uchar start, uchar end, uchar pid, uchar page);
 void *malloc(ushort size);
 void free(void *ptr);
+void free_for_pid(void *ptr, uchar pid);
 ushort get_mem_usage(uchar pid);
 ushort get_total_mem_usage();
 void init_memory();

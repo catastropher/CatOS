@@ -173,6 +173,10 @@ void init_process() __naked {
 		ld a,(hl)
 		
 		out (#5),a
+		
+		ld a,#1
+		ld (_allow_interrupts),a
+		ei
 		ret
 	__endasm;
 }
@@ -229,6 +233,7 @@ uchar start_process(void *function, uchar *name) {
 	uchar i;
 	ushort *ptr;
 	uchar page;
+	uchar allow_int = allow_interrupts;
 	
 	allow_interrupts = 0;
 	
@@ -273,10 +278,13 @@ uchar start_process(void *function, uchar *name) {
 			// init_process
 			write_short_far(process_tab[i].ram_page, &ptr[8], (ushort)function);
 
+			allow_interrupts = allow_int;
 			
 			return i;
 		}
 	}
+	
+	allow_interrupts = allow_int;
 	
 	return 255;
 }
@@ -286,16 +294,16 @@ void begin_run_process() {
 	current_process = &process_tab[0];
 
 	__asm
-		;di
+		di
 		;halt
 		ld a,#1
 		ld (_allow_interrupts),a
-		ei
 		ld hl,(_current_process)
 		inc hl
 		inc hl
 		ld a,(hl)
 		out (#5),a
+		ei
 	__endasm;
 	
 	//HALT();

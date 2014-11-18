@@ -412,13 +412,28 @@ void game_process() {
 	} while(1);
 	
 	while(1);
-}
+}		
 	
+typedef struct {
+	uchar *name;
+	void *function;
+} Program;
 	
 void system_process4() {
 	uchar buf[32];
 	uchar pid = 0;
 	uchar i;
+	const Program program_list[] = {
+		{"console", system_process4},
+		{"hello", system_process2},
+		{"count", system_process},
+		{"math", math_process},
+		{"fs", fs_test},
+		{"game", game_process}
+	};
+	const uchar total_programs = sizeof(program_list) / sizeof(Program);
+		
+	
 	
 	printf("CatOS console\n\n");
 	
@@ -426,7 +441,14 @@ void system_process4() {
 		printf("$\r");
 		get_input(buf);
 		EI();
+	
+		for(i = 0;i < total_programs;i++) {
+			if(strcmp(buf, program_list[i].name) == 0) {
+				pid = start_program(program_list[i].function, program_list[i].name, 255);
+			}
+		}
 		
+#if 0
 		if(strcmp("mem", buf) == 0) {
 			printf("Free RAM: %ld\n", get_free_mem());
 			printf("Free kernal RAM: %d\n", (ushort)get_free_blocks(1) * 128);
@@ -449,6 +471,9 @@ void system_process4() {
 		else if(strcmp("game", buf) == 0) {
 			pid = start_program(game_process, "game", 255);
 		}
+		else if(strcmp("mtest", buf) == 0) {
+			test_mem();
+		}
 		else if(strcmp("proc", buf) == 0) {
 			for(i = 0;i < MAX_PROCS;i++) {
 				if(process_tab[i].id != 255) {
@@ -463,11 +488,16 @@ void system_process4() {
 			printf("Unknown command\n");
 		}
 		
+#endif
+		
 		if(pid != 0) {
 			printf("Forked process\n");
 			printf("PID: %d\n", pid);
 			printf("RAM page: %d\n", process_tab[pid].ram_page);
 			pid = 0;
+		}
+		else {
+			printf("Unknown command\n");
 		}
 	} while(1);
 }
@@ -489,13 +519,9 @@ void sys_process() {
 	
 	
 	while(1) {
-		//force_context_switch();
+		force_context_switch();
 	}
 }
-			
-			
-					
-		
 
 
 void main() {
