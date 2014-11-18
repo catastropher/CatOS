@@ -290,6 +290,7 @@ uchar start_process(void *function, uchar *name) {
 }
 
 // Begins multitasking by allowing the first process to execute (the system process)
+// Note: there is no returning from this function!
 void begin_run_process() {
 	current_process = &process_tab[0];
 

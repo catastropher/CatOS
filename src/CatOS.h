@@ -25,6 +25,7 @@ typedef unsigned short ushort;
 #include "memory.h"
 #include "console.h"
 #include "filesystem.h"
+#include "system.h"
 
 #define DI() __asm\
 	di\

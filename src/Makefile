@@ -7,9 +7,9 @@ EXECUTABLE=OS.hex
 
 all: CatOS.rom
 
-CatOS.rom: font.rel startup.rel CatOS.rel graphics.rel sysvars.rel memory.rel multitask.rel page1C.rel console.rel keypad.rel filesystem.rel
+CatOS.rom: font.rel startup.rel CatOS.rel graphics.rel sysvars.rel memory.rel multitask.rel page1C.rel console.rel keypad.rel filesystem.rel system.rel
 	cp ../tools/CatOS.rom .
-	$(CC) $(LDFLAGS) startup.rel CatOS.rel graphics.rel font.rel sysvars.rel filesystem.rel memory.rel multitask.rel console.rel keypad.rel
+	$(CC) $(LDFLAGS) startup.rel CatOS.rel graphics.rel font.rel sysvars.rel filesystem.rel memory.rel multitask.rel console.rel keypad.rel system.rel
 	$(CC) --no-std-crt0 -mz80 -o output_page1C.ihx page1C.rel
 	
 	../tools/multihex 00 output.ihx 1C output_page1C.ihx > OS.hex
@@ -45,6 +45,9 @@ console.rel: console.c
 	
 keypad.rel: keypad.c
 	$(CC) $(CFLAGS) keypad.c
+	
+system.rel: system.c
+	$(CC) $(CFLAGS) system.c
 
 startup.rel: startup.z80
 	cp startup.z80 startup.asm

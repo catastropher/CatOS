@@ -130,6 +130,18 @@ void free(void *ptr) {
 	free_for_pid(ptr, process_id);
 }
 
+// Frees all memory owned by a process
+// Warning: do not call this with pid equal to the current process! It will probably crash!
+void free_all_for_pid(uchar pid) {
+	ushort i;
+	
+	for(i = 0;i < RAM_PAGES * TOTAL_BLOCKS;i++) {
+		if((malloc_tab_full[i] & BLOCK_FREE) == pid)
+			malloc_tab_full[i] = BLOCK_FREE;
+	}
+}
+		
+		
 // Returns the number of blocks which are free on a given RAM page
 uchar get_free_blocks(uchar page) {
 	uchar i;

@@ -14,5 +14,6 @@ unsigned long get_free_mem();
 void *system_alloc(ushort size);
 uchar get_free_blocks(uchar page);
 void *fs_alloc(ushort size);
+void free_all_for_pid(uchar pid);
 
 #endif
