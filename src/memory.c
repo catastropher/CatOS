@@ -136,7 +136,7 @@ void free_all_for_pid(uchar pid) {
 	ushort i;
 	
 	for(i = 0;i < RAM_PAGES * TOTAL_BLOCKS;i++) {
-		if((malloc_tab_full[i] & BLOCK_FREE) == pid)
+		if((malloc_tab_full[i] & (~128)) == pid)
 			malloc_tab_full[i] = BLOCK_FREE;
 	}
 }
@@ -212,5 +212,5 @@ void init_memory() {
 	
 	// Reserve some kernal RAM for global variables
 	malloc_tab_full[TOTAL_BLOCKS] = 0;
-	memset(malloc_tab_full + TOTAL_BLOCKS + 1, 128, 25);
+	memset(malloc_tab_full + TOTAL_BLOCKS + 1, 128, 26);
 }

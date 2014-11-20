@@ -318,6 +318,7 @@ Console *init_visible_console(uchar pid, uchar parent_pid) {
 	for(i = 0;i < 5;i++)
 		found[i] = 0;
 	
+	// If it's 255, create a new console
 	if(parent_pid == 255) {
 		c = init_console(pid);
 		c->visible_id = 255;
@@ -335,12 +336,14 @@ Console *init_visible_console(uchar pid, uchar parent_pid) {
 			}
 		}
 	}
+	else {
+		// Inherit the console from the parent process
+		console_tab[pid] = console_tab[parent_pid];
+		console_tab[parent_pid] = NULL;
+	}
 	
 	return c;
 }
-
-// The amount of space it takes 
-#define LINE_SIZE (96 * 7 / 8)
 
 // Prints a character to the given console
 // Special characters:
@@ -453,12 +456,14 @@ void draw_console(Console *c) {
 		draw_string(&c->data[i * CONSOLE_WIDTH], 0, i * 7);
 	}
 	
-	sprintf(buf, "CatOS v1.0 - %s", process_tab[console_pid].name);
+	if(console_pid != 0) {
+		sprintf(buf, "CatOS v1.0 - %s", process_tab[console_pid].name);
 
-	draw_string(buf, 0, 63 - 5);
-	
-	for(i = 0;i < LINE_SIZE;i++) {
-		system_screen[768 - LINE_SIZE + i] = ~system_screen[768 - LINE_SIZE + i];
+		draw_string(buf, 0, 63 - 5);
+		
+		for(i = 0;i < LINE_SIZE;i++) {
+			system_screen[768 - LINE_SIZE + i] = ~system_screen[768 - LINE_SIZE + i];
+		}
 	}
 	
 	if(transition_mode == 0)

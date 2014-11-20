@@ -162,6 +162,11 @@ uchar compare_key_matrix(KeyState *old, KeyState *new) {
 		
 		return KEY_LEFT;
 	}
+	else if(KEY(old, 6, 0) && !KEY(new, 6, 0)) {
+		new->flags = 0;
+		
+		return KEY_MODE;
+	}
 	else if(KEY(old, 0, 6) && !KEY(new, 0, 6)) {
 		new->flags = 0;
 		
@@ -220,6 +225,7 @@ uchar wait_key() {
 		while(console_pid != process_id) {
 			current_process->flags = (current_process->flags & (~1)) | PROC_WAIT_KEY;
 			force_context_switch();
+			//printf("Wait\n");
 		}
 		
 		key = current_process->key;

@@ -17,5 +17,6 @@ uchar wait_key();
 #define KEY_UP 131
 #define KEY_LEFT 132
 #define KEY_RIGHT 133
+#define KEY_MODE 134
 
 #endif

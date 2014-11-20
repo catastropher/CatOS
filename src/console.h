@@ -33,4 +33,7 @@ extern uchar console_pid;
 extern Console *console_tab[MAX_PROCS];
 extern uchar allow_interrupts;
 
+// The number of bytes a single printed line of text takes
+#define LINE_SIZE (96 * 7 / 8)
+
 #endif

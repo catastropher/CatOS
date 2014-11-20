@@ -103,6 +103,7 @@ ushort test() {
 	return 5;
 }
 
+#if 0
 uchar get_calc_status() {
 	__asm
 		push af
@@ -112,7 +113,7 @@ uchar get_calc_status() {
 		ret
 	__endasm;
 }
-
+#endif
 
 
 /*
@@ -129,6 +130,7 @@ extern unsigned long int_counter;
 
 //uchar system_screen_buffer[768];
 
+#if 1
 void system_process() {
 	ushort i = 0;
 	
@@ -144,8 +146,9 @@ void system_process() {
 	
 	while(1) ;
 }
+#endif
 
-void system_process3() {
+void process_sum() {
 	long sum = 0;
 	long i;
 	char buf[20];
@@ -157,10 +160,6 @@ void system_process3() {
 	}
 	
 	printf("Sum: %ld\n", sum);
-	
-	while(1) {
-		get_input(buf);
-	}
 }
 	
 extern long int_counter2;
@@ -297,6 +296,8 @@ uchar board_check(uchar board[3][3], uchar start_x, uchar start_y, char dx, char
 	return board[start_y][start_x];
 }
 
+#if 1
+
 void game_process() {
 	uchar board[3][3];
 	uchar i, d;
@@ -413,12 +414,28 @@ void game_process() {
 	
 	while(1);
 }		
-	
+
+#endif
+
 typedef struct {
 	uchar *name;
 	void *function;
 } Program;
 	
+
+void print_procs() {
+	uchar i;
+	
+	for(i = 0;i < MAX_PROCS;i++) {
+		if(process_tab[i].id != 255) {
+			printf("*%d: %s (%s)", i, process_tab[i].name, (process_tab[i].flags & PROC_RUN) ? "run" : "sleep");
+			
+			printf(" W%c\n", (console_tab[i] != NULL) ? console_tab[i]->visible_id + '0' : '-');
+			
+		}
+	}
+}
+
 void system_process4() {
 	uchar buf[32];
 	uchar pid = 0;
@@ -428,12 +445,11 @@ void system_process4() {
 		{"hello", system_process2},
 		{"count", system_process},
 		{"math", math_process},
-		{"fs", fs_test},
+		{"proc", print_procs},
+		{"sum", process_sum},
 		{"game", game_process}
 	};
 	const uchar total_programs = sizeof(program_list) / sizeof(Program);
-		
-	
 	
 	printf("CatOS console\n\n");
 	
@@ -444,7 +460,10 @@ void system_process4() {
 	
 		for(i = 0;i < total_programs;i++) {
 			if(strcmp(buf, program_list[i].name) == 0) {
-				pid = start_program(program_list[i].function, program_list[i].name, 255);
+				call_program(program_list[i].function, program_list[i].name);
+				pid = 1;
+				//pid = start_program(program_list[i].function, program_list[i].name, 255);
+				break;
 			}
 		}
 		
@@ -491,9 +510,9 @@ void system_process4() {
 #endif
 		
 		if(pid != 0) {
-			printf("Forked process\n");
-			printf("PID: %d\n", pid);
-			printf("RAM page: %d\n", process_tab[pid].ram_page);
+			//printf("Forked process\n");
+			//printf("PID: %d\n", pid);
+			//printf("RAM page: %d\n", process_tab[pid].ram_page);
 			pid = 0;
 		}
 		else {
@@ -632,8 +651,8 @@ void main() {
 	
 	
 	
-	start_process(sys_process, "system");
-	
+	//start_process(sys_process, "system");
+	start_process(catos_system_process, "system");
 	
 	//switch_console(0);
 	
@@ -641,7 +660,7 @@ void main() {
 	
 	//console_pid = 0;
 	//current_con = console_tab[0];
-	active_con = NULL;//console_tab[0];
+	//active_con = NULL;//console_tab[0];
 	
 	/*__asm
 		di

@@ -30,7 +30,7 @@ void wait(ushort ticks) {
 // Switches the kernal global variables to reflect what the new process is.
 // This has to be outside of switch_process because switch_process modifies
 // the stack pointer, so we don't want it to have a stack frame.
-void do_switch(uchar new_pid) {
+void process_do_switch(uchar new_pid) {
 	current_process = &process_tab[new_pid];
 	process_id = new_pid;
 	current_con = console_tab[new_pid];
@@ -40,7 +40,7 @@ void do_switch(uchar new_pid) {
 // Warning: it is assumed that the process control block has already been saved,
 // so this will modify the stack pointer... do not call this directly!
 ushort switch_process(uchar new_pid) __naked{
-	do_switch(new_pid);
+	process_do_switch(new_pid);
 	
 	__asm
 		ld hl, (_current_process)
@@ -107,6 +107,8 @@ uchar transition_pos;
 uchar *transition_screen;
 uchar cursor_counter;
 
+uchar key_mode_pressed;
+
 // The "high-level" interrup handler, which is called from the assembly routine 'isr'
 // (see startup.z80)
 void interrupt_handler(uchar flags) {
@@ -132,7 +134,16 @@ void interrupt_handler(uchar flags) {
 	key = compare_key_matrix(&current_process->old_state, &current_process->new_state);
 	
 	if(key != 0) {
-		current_process->key = key;
+		if(key == KEY_MODE && !key_mode_pressed) {
+			//console_printc(console_tab[5], 'X');
+			key_mode_pressed = 1;
+			generate_system_event(EV_KILL_PROCESS, console_pid, NULL);
+			//switch_console(0);
+		}
+		else {
+			current_process->key = key;
+			key_mode_pressed = 0;
+		}
 	}
 	
 	// If a timer interrupt happened, increase the timers
@@ -160,6 +171,16 @@ void interrupt_handler(uchar flags) {
 			}
 		} while(1);
 	}
+}
+
+// This is called when a program returns from its main function.
+// It lets the system know that it can clean up and end the process.
+void end_process() {
+	generate_system_event(EV_KILL_PROCESS, process_id, 1);
+	
+	// Wait to be killed...
+	while(1)
+		force_context_switch();
 }
 
 // This routine is the first thing a process calls when it starts running
@@ -274,10 +295,13 @@ uchar start_process(void *function, uchar *name) {
 			// starts running
 			write_short_far(process_tab[i].ram_page, &ptr[7], (ushort)init_process);
 			
-			// Finally, inject the actual starting address of the function, which should be called after
+			// Nnject the actual starting address of the function, which should be called after
 			// init_process
 			write_short_far(process_tab[i].ram_page, &ptr[8], (ushort)function);
 
+			// Finally, inject end_process so it cleans up after iteself when it's done executing
+			write_short_far(process_tab[i].ram_page, &ptr[9], (ushort)end_process);
+			
 			allow_interrupts = allow_int;
 			
 			return i;
@@ -319,14 +343,44 @@ uchar start_program(void *function, uchar *name, uchar parent_id) {
 	allow_interrupts = 0;
 	DI();
 	pid = start_process(function, name);
-	init_visible_console(pid, 255);
+	init_visible_console(pid, parent_id);
 	allow_interrupts = allow_int;
 	
 	if(allow_int) {
 		EI();
 	}
 	
+	process_tab[pid].parent_id = parent_id;
+	
 	return pid;
+}
+
+// "Calls" a program i.e. the parent is paused until the child is done executing.
+// Note: the child inherits the console from the parent.
+void call_program(void *function, uchar *name) {
+	uchar pid;
+	
+	allow_interrupts = 0;
+	pid = start_program(function, name, process_id);
+	
+	if(console_pid == process_id) {
+		console_pid = pid;
+		printf("\r");
+	}
+	
+	process_tab[process_id].flags |= PROC_WAIT_RETURN;
+	process_tab[process_id].flags &= (~PROC_RUN);
+	
+	allow_interrupts = 1;
+	force_context_switch();
+	
+	process_tab[process_id].flags |= PROC_RUN;
+	printf("\n");
+	
+	allow_interrupts = 1;
+	EI();
+	
+	
 }
 	
 // Initializes multitasking, but does not actually run the first process yet
@@ -343,6 +397,7 @@ void init_multitask() {
 	}
 	
 	key_counter = 0;
+	key_mode_pressed = 0;
 }
 
 

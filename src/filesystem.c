@@ -54,8 +54,6 @@ void *fs_get_pointer(uchar *name, uchar type) {
 	return dir;
 }
 
-#endif
-
 uchar fs_directory_add_item(Directory *dir, void *item) {
 	uchar i;
 	uchar pos = 255;
@@ -124,5 +122,5 @@ void fs_test() {
 	fs_print_dir(dir);
 }
 
-
+#endif
 
